@@ -1,0 +1,138 @@
+#r "System.Runtime"
+#r "System"
+using System.Net;
+using System.Text;
+using Twilio.TwiML;
+using System;
+using System.Data.SqlClient;
+
+public static async Task<HttpResponseMessage> Run(HttpRequestMessage req, 
+    TraceWriter log)
+{
+    log.Info("C# HTTP trigger function processed a request.");
+   
+    var data = await req.Content.ReadAsStringAsync();
+    var formValues = data.Split('&')
+        .Select(value => value.Split('='))
+        .ToDictionary(pair => Uri.UnescapeDataString(pair[0]).Replace("+", " "), 
+                      pair => Uri.UnescapeDataString(pair[1]).Replace("+", " "));
+    // Perform calculations, API lookups, etc. here
+       
+       
+      
+      
+    string title = GetNames();
+  if(formValues["Body"]!="#") 
+   {
+   
+      GiveName(formValues["Body"]);
+     
+   }
+   
+  
+        var response = new MessagingResponse()
+     
+          .Message(title);
+    var twiml = response.ToString();
+    twiml = twiml.Replace("utf-16", "utf-8");
+    return new HttpResponseMessage
+    {
+        Content = new StringContent(twiml, Encoding.UTF8, "application/xml")
+    };
+ 
+}
+ static string GetNames()
+        {
+            try
+            {
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+                builder.DataSource = "jamnamer.database.windows.net";
+                builder.UserID = "apettis";
+                builder.Password = "Vaudette151";
+                builder.InitialCatalog = "JamNamerDatabase";
+                using (SqlConnection connection = new SqlConnection(builder.ConnectionString))
+                {
+                    Console.WriteLine("\nQuery data example:");
+                    Console.WriteLine("=========================================\n");
+                    connection.Open();
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.Append("SELECT TOP 1 Title FROM JamBot WHERE New = 1 ORDER BY newid()");
+
+                    String sql = sb.ToString();
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string title = reader.GetString(0);
+                               
+                                return title;
+                               
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException e)
+            {
+                Console.WriteLine(e.ToString());
+                return "False";
+            }
+            return "False";
+            
+        }
+      static void GiveName(string smsTitle)
+        {
+          
+      
+
+            // conn and reader declared outside try
+            // block for visibility in finally block
+            SqlConnection conn = null;
+            SqlDataReader reader = null;
+          //  string Title = smsTitle;
+            try
+            {
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+                builder.DataSource = "jamnamer.database.windows.net";
+                builder.UserID = "apettis";
+                builder.Password = "Vaudette151";
+                builder.InitialCatalog = "JamNamerDatabase";
+                // instantiate and open connection
+                conn = new SqlConnection(builder.ConnectionString);
+                conn.Open();
+
+                // 1. declare command object with parameter
+                SqlCommand cmd = new SqlCommand(
+                    "INSERT into JamBot(New, Title) values('True', @Title)", conn);
+                SqlParameter param = new SqlParameter();
+                param.ParameterName = "@Title";
+                param.Value = smsTitle;
+                cmd.Parameters.Add(param);
+ 
+                cmd.ExecuteNonQuery();
+                conn.Close();
+            
+            }
+            finally
+            {
+                // close reader
+                if (reader != null)
+                {
+                    reader.Close();
+                }
+                // close connection
+                if (conn != null)
+                {
+                    conn.Close();
+                }
+            }
+            return;
+        }
+public class LogRequest
+{
+    public int Id{get;set;}
+    public string Log{get;set;}
+}
